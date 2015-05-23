@@ -20,6 +20,8 @@
   },
   "homepage": "https://github.com/lexplano/etar-client#readme",
   "dependencies": {
-    "yargs": "3.x"
+    "mkdirp": "0.5.x",
+    "yargs": "3.x",
+    "yauzl": "2.x"
   }
 }
