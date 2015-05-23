@@ -13,12 +13,18 @@ let argv = yargs
 			.help("help")
 			.epilog(ENV_VAR_MESSAGE);
 	})
-	.command("download", "Download and extract the new package", function (yargs) {
+	.command("download", "Download, extract and verify the results", function (yargs) {
 		yargs
 			.usage("Usage: $0 download [options]")
 			.option("extract-to", {
 				"describe": "Folder to copy the extracted documents to (will discard the downloaded package upon successful extraction)",
-				"type": "string"
+				"type": "string",
+				"required": true
+			})
+			.option("cleanup", {
+				"describe": "Remove temporary files",
+				"default": true,
+				"type": "boolean"
 			})
 			.option("confirm-reception", {
 				"describe": "Acknowledge retrieval to the TAR API upon success",
@@ -30,7 +36,13 @@ let argv = yargs
 	})
 	.command("extract", "Extract downloaded package", function (yargs) {
 		yargs
-			.usage("Usage: $0 extract <package> <folder>")
+			.usage("Usage: $0 extract <zip package> <docs folder>")
+			.demand(3)
+			.help("help");
+	})
+	.command("verify", "Verify extracted package", function (yargs) {
+		yargs
+			.usage("Usage: $0 verify <zip package> <docs folder>")
 			.demand(3)
 			.help("help");
 	})
@@ -54,6 +66,10 @@ switch (cmd) {
 
 	case "extract":
 		etarClient.extract(argv._[1], argv._[2]);
+		break;
+
+	case "verify":
+		etarClient.verify(argv._[1], argv._[2]);
 		break;
 
 	default:
