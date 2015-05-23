@@ -3,6 +3,9 @@
   "version": "0.0.0",
   "description": "Client for https://www.e-tar.lt/ subscriptions",
   "main": "index.js",
+  "bin": {
+    "etar-client": "./cli.js"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -15,5 +18,8 @@
   "bugs": {
     "url": "https://github.com/lexplano/etar-client/issues"
   },
-  "homepage": "https://github.com/lexplano/etar-client#readme"
+  "homepage": "https://github.com/lexplano/etar-client#readme",
+  "dependencies": {
+    "yargs": "3.x"
+  }
 }
