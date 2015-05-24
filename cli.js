@@ -3,7 +3,7 @@
 let yargs = require("yargs"),
 	etarClient = require("./index");
 
-var ENV_VAR_MESSAGE = "Required environment variables:\n  ETAR_USERNAME, ETAR_PASSWORD, ETAR_USERGUID.\n\n";
+const ENV_VAR_MESSAGE = "Required environment variables:\n  ETAR_USERNAME, ETAR_PASSWORD, ETAR_USERGUID.\n\n";
 
 let argv = yargs
 	.usage("Usage: $0 <command> [options]")
