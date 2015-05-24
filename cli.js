@@ -21,7 +21,7 @@ let argv = yargs
 				"type": "string",
 				"required": true
 			})
-			.option("confirm-reception", {
+			.option("notify", {
 				"describe": "Acknowledge retrieval to the TAR API upon success",
 				"default": true,
 				"type": "boolean"
@@ -39,6 +39,12 @@ let argv = yargs
 		yargs
 			.usage("Usage: $0 verify <zip package> <docs folder>")
 			.demand(3)
+			.help("help");
+	})
+	.command("notify", "Acknowledge retrieval to the TAR API", function (yargs) {
+		yargs
+			.usage("Usage: $0 notify <package ID>")
+			.demand(2)
 			.help("help");
 	})
 	.epilog(ENV_VAR_MESSAGE)
@@ -82,6 +88,16 @@ switch (cmd) {
 
 	case "verify":
 		etarClient.verify(argv._[1], argv._[2]);
+		break;
+
+	case "notify":
+		etarClient.notify(argv._[1], function (err) {
+			if (err) {
+				throw err;
+			}
+
+			console.log("Notification sent");
+		});
 		break;
 
 	default:
