@@ -21,11 +21,6 @@ let argv = yargs
 				"type": "string",
 				"required": true
 			})
-			.option("cleanup", {
-				"describe": "Remove temporary files",
-				"default": true,
-				"type": "boolean"
-			})
 			.option("confirm-reception", {
 				"describe": "Acknowledge retrieval to the TAR API upon success",
 				"default": true,
@@ -57,6 +52,12 @@ switch (cmd) {
 		etarClient.download({
 			extractTo: argv.extractTo,
 			confirmReception: argv.confirmReception
+		}, function (err) {
+			if (err) {
+				throw err;
+			}
+
+			console.log(arguments);
 		});
 		break;
 
