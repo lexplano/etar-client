@@ -61,7 +61,18 @@ switch (cmd) {
 		break;
 
 	case "check":
-		etarClient.check();
+		etarClient.check(function (err, result) {
+			if (err) {
+				throw err;
+			}
+
+			if (!result) {
+				console.log("New package not ready yet");
+				return;
+			}
+
+			console.log("New package available", result);
+		});
 		break;
 
 	case "extract":
