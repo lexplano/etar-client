@@ -13,18 +13,13 @@ let argv = yargs
 			.help("help")
 			.epilog(ENV_VAR_MESSAGE);
 	})
-	.command("download", "Download, extract and verify the results", function (yargs) {
+	.command("download", "Download the latest package", function (yargs) {
 		yargs
 			.usage("Usage: $0 download [options]")
-			.option("extract-to", {
-				"describe": "Folder to copy the extracted documents to (will discard the downloaded package upon successful extraction)",
+			.option("storage-path", {
+				"describe": "Folder where extracted documents are stored (package will be saved in .packages)",
 				"type": "string",
 				"required": true
-			})
-			.option("notify", {
-				"describe": "Acknowledge retrieval to the TAR API upon success",
-				"default": true,
-				"type": "boolean"
 			})
 			.help("help")
 			.epilog(ENV_VAR_MESSAGE);
@@ -45,7 +40,8 @@ let argv = yargs
 		yargs
 			.usage("Usage: $0 notify <package ID>")
 			.demand(2)
-			.help("help");
+			.help("help")
+			.epilog(ENV_VAR_MESSAGE);
 	})
 	.epilog(ENV_VAR_MESSAGE)
 	.argv;
@@ -54,19 +50,6 @@ let cmd = argv._[0];
 
 switch (cmd) {
 
-	case "download":
-		etarClient.download({
-			extractTo: argv.extractTo,
-			confirmReception: argv.confirmReception
-		}, function (err) {
-			if (err) {
-				throw err;
-			}
-
-			console.log(arguments);
-		});
-		break;
-
 	case "check":
 		etarClient.check(function (err, result) {
 			if (err) {
@@ -74,6 +57,7 @@ switch (cmd) {
 			}
 
 			if (!result) {
+				// @todo: correct exit code
 				console.log("New package not ready yet");
 				return;
 			}
@@ -82,12 +66,36 @@ switch (cmd) {
 		});
 		break;
 
+	case "download":
+		etarClient.download({
+			storagePath: argv.storagePath
+		}, function (err, pkg) {
+			if (err) {
+				throw err;
+			}
+
+			console.log("Downloaded", pkg);
+		});
+		break;
+
 	case "extract":
-		etarClient.extract(argv._[1], argv._[2]);
+		etarClient.extract(argv._[1], argv._[2], function (err) {
+			if (err) {
+				throw err;
+			}
+
+			console.log("Extracted");
+		});
 		break;
 
 	case "verify":
-		etarClient.verify(argv._[1], argv._[2]);
+		etarClient.verify(argv._[1], argv._[2], function (err) {
+			if (err) {
+				throw err;
+			}
+
+			console.log("Extracted contents verified");
+		});
 		break;
 
 	case "notify":
