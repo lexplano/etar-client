@@ -3,6 +3,11 @@
   "version": "0.2.0",
   "description": "Client for https://www.e-tar.lt/ subscriptions",
   "main": "index.js",
+  "files": [
+    "cli.js",
+    "index.js",
+    "lib/"
+  ],
   "bin": {
     "etar-client": "./cli.js"
   },
