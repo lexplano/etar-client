@@ -19,7 +19,11 @@
     "url": "https://github.com/lexplano/etar-client/issues"
   },
   "homepage": "https://github.com/lexplano/etar-client#readme",
+  "engines": {
+    "node": ">=1"
+  },
   "dependencies": {
+    "asic-verify": "0.1.x",
     "mkdirp": "0.5.x",
     "request": "2.x",
     "request-progress": "0.3.x",

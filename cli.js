@@ -24,15 +24,15 @@ let argv = yargs
 			.help("help")
 			.epilog(ENV_VAR_MESSAGE);
 	})
+	.command("verify", "Verify downloaded zip", function (yargs) {
+		yargs
+			.usage("Usage: $0 verify <zip package>")
+			.demand(2)
+			.help("help");
+	})
 	.command("extract", "Extract downloaded package", function (yargs) {
 		yargs
 			.usage("Usage: $0 extract <zip package> <docs folder>")
-			.demand(3)
-			.help("help");
-	})
-	.command("verify", "Verify extracted package", function (yargs) {
-		yargs
-			.usage("Usage: $0 verify <zip package> <docs folder>")
 			.demand(3)
 			.help("help");
 	})
@@ -78,6 +78,16 @@ switch (cmd) {
 		});
 		break;
 
+	case "verify":
+		etarClient.verify(argv._[1], function (err) {
+			if (err) {
+				throw err;
+			}
+
+			console.log("Verified");
+		});
+		break;
+
 	case "extract":
 		etarClient.extract(argv._[1], argv._[2], function (err) {
 			if (err) {
@@ -85,16 +95,6 @@ switch (cmd) {
 			}
 
 			console.log("Extracted");
-		});
-		break;
-
-	case "verify":
-		etarClient.verify(argv._[1], argv._[2], function (err) {
-			if (err) {
-				throw err;
-			}
-
-			console.log("Extracted contents verified");
 		});
 		break;
 
