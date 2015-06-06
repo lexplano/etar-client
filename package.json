@@ -13,7 +13,7 @@
     "type": "git",
     "url": "git+https://github.com/lexplano/etar-client.git"
   },
-  "author": "MB H6.LT",
+  "author": "MB H6.LT <info@lexplano.com>",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/lexplano/etar-client/issues"
