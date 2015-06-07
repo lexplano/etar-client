@@ -16,12 +16,8 @@ let argv = yargs
 	})
 	.command("download", "Download the latest package", function (yargs) {
 		yargs
-			.usage("Usage: $0 download [options]")
-			.option("storage-path", {
-				"describe": "Folder where extracted documents are stored (package will be saved in .packages)",
-				"type": "string",
-				"required": true
-			})
+			.usage("Usage: $0 download <storage path>")
+			.demand(2)
 			.help("help")
 			.epilog(ENV_VAR_MESSAGE);
 	})
@@ -68,9 +64,7 @@ switch (cmd) {
 		break;
 
 	case "download":
-		etarClient.download({
-			storagePath: argv.storagePath
-		}, function (err, pkg) {
+		etarClient.download(argv._[1], function (err, pkg) {
 			if (err) {
 				throw err;
 			}
