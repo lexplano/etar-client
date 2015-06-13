@@ -54,8 +54,8 @@ switch (cmd) {
 			}
 
 			if (!result) {
-				// @todo: correct exit code
 				console.log("New package not ready yet");
+				process.exit(1);
 				return;
 			}
 
