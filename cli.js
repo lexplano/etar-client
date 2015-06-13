@@ -2,7 +2,8 @@
 "use strict";
 
 let yargs = require("yargs"),
-	etarClient = require("./index");
+	etarClient = require("./index"),
+	getPackageInfoFromZip = require("./lib/internal/getPackageInfoFromZip");
 
 const ENV_VAR_MESSAGE = "Required environment variables:\n  ETAR_USERNAME, ETAR_PASSWORD, ETAR_USERGUID.\n\n";
 
@@ -74,12 +75,19 @@ switch (cmd) {
 		break;
 
 	case "verify":
-		etarClient.verify(argv._[1], function (err) {
+		var pkgPath = argv._[1];
+		etarClient.verify(pkgPath, function (err) {
 			if (err) {
 				throw err;
 			}
 
-			console.log("Verified");
+			getPackageInfoFromZip(pkgPath, function (err, pkgInfo) {
+				if (err) {
+					throw err;
+				}
+
+				console.log("Verified", pkgInfo);
+			});
 		});
 		break;
 
