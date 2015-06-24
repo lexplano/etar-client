@@ -28,12 +28,6 @@ let argv = yargs
 			.demand(2)
 			.help("help");
 	})
-	.command("extract", "Extract downloaded package", function (yargs) {
-		yargs
-			.usage("Usage: $0 extract <zip package> <docs folder>")
-			.demand(3)
-			.help("help");
-	})
 	.command("notify", "Acknowledge retrieval to the TAR API", function (yargs) {
 		yargs
 			.usage("Usage: $0 notify <package ID>")
@@ -88,16 +82,6 @@ switch (cmd) {
 
 				console.log("Verified", pkgInfo);
 			});
-		});
-		break;
-
-	case "extract":
-		etarClient.extract(argv._[1], argv._[2], function (err) {
-			if (err) {
-				throw err;
-			}
-
-			console.log("Extracted");
 		});
 		break;
 
