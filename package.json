@@ -29,6 +29,7 @@
   },
   "dependencies": {
     "asic-verify": "0.1.x",
+    "async-waterfall": "0.1.x",
     "concat-stream": "1.x",
     "mkdirp": "0.5.x",
     "request": "2.x",

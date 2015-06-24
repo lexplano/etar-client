@@ -2,8 +2,7 @@
 "use strict";
 
 let yargs = require("yargs"),
-	etarClient = require("./index"),
-	getPackageInfoFromZip = require("./lib/internal/getPackageInfoFromZip");
+	etarClient = require("./index");
 
 const ENV_VAR_MESSAGE = "Required environment variables:\n  ETAR_USERNAME, ETAR_PASSWORD, ETAR_USERGUID.\n\n";
 
@@ -35,10 +34,17 @@ let argv = yargs
 			.help("help")
 			.epilog(ENV_VAR_MESSAGE);
 	})
+	.command("rotate", "check, then verify, then notify", function (yargs) {
+		yargs
+			.usage("Usage: $0 rotate <storage path>")
+			.demand(2)
+			.help("help")
+			.epilog(ENV_VAR_MESSAGE);
+	})
 	.epilog(ENV_VAR_MESSAGE)
 	.argv;
 
-let cmd = argv._[0];
+const cmd = argv._[0];
 
 switch (cmd) {
 
@@ -69,19 +75,12 @@ switch (cmd) {
 		break;
 
 	case "verify":
-		var pkgPath = argv._[1];
-		etarClient.verify(pkgPath, function (err) {
+		etarClient.verify(argv._[1], function (err) {
 			if (err) {
 				throw err;
 			}
 
-			getPackageInfoFromZip(pkgPath, function (err, pkgInfo) {
-				if (err) {
-					throw err;
-				}
-
-				console.log("Verified", pkgInfo);
-			});
+			console.log("Verified");
 		});
 		break;
 
@@ -92,6 +91,21 @@ switch (cmd) {
 			}
 
 			console.log("Notification sent");
+		});
+		break;
+
+	case "rotate":
+		etarClient.rotate(argv._[1], function (err, pkg) {
+			if (err) {
+				throw err;
+			}
+
+			if (!pkg) {
+				console.log("New package not ready yet");
+				return;
+			}
+
+			console.log("Notification sent", pkg);
 		});
 		break;
 
