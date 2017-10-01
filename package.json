@@ -12,7 +12,7 @@
     "etar-client": "./cli.js"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "lab -t 100 --lint --verbose"
   },
   "repository": {
     "type": "git",
@@ -37,5 +37,8 @@
     "xml2js": "0.4.x",
     "yargs": "3.x",
     "yauzl": "2.x"
+  },
+  "devDependencies": {
+    "lab": "14.x"
   }
 }
