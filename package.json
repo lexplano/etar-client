@@ -9,7 +9,7 @@
     "lib/"
   ],
   "bin": {
-    "etar-client": "./cli.js"
+    "etar-client": "./bin/etar-client.js"
   },
   "scripts": {
     "test": "lab -t 100 --lint --verbose"
@@ -25,7 +25,7 @@
   },
   "homepage": "https://github.com/lexplano/etar-client#readme",
   "engines": {
-    "node": ">=1"
+    "node": ">=8"
   },
   "dependencies": {
     "asic-verify": "0.1.x",
