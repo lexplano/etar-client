@@ -30,15 +30,17 @@
   "dependencies": {
     "asic-verify": "0.1.x",
     "async-waterfall": "0.1.x",
-    "concat-stream": "1.x",
+    "concat-stream": "1.x.x",
     "mkdirp": "0.5.x",
-    "request": "2.x",
+    "request": "2.x.x",
     "request-progress": "0.3.x",
     "xml2js": "0.4.x",
-    "yargs": "3.x",
-    "yauzl": "2.x"
+    "yargs": "3.x.x",
+    "yauzl": "2.x.x"
   },
   "devDependencies": {
-    "lab": "14.x"
+    "hapi": "16.x.x",
+    "hapi-auth-basic": "4.x.x",
+    "lab": "14.x.x"
   }
 }
