@@ -4,9 +4,9 @@
   "description": "Client for https://www.e-tar.lt/ subscriptions",
   "main": "index.js",
   "files": [
-    "cli.js",
-    "index.js",
-    "lib/"
+    "bin/",
+    "lib/",
+    "index.js"
   ],
   "bin": {
     "etar-client": "./bin/etar-client.js"
