@@ -55,6 +55,20 @@ internals.service.register = (server, options, next) => {
             }
         });
 
+        server.route({
+            method: 'POST',
+            path: '/portal/DataExportAPI/{userguid}/packetReceptionConfirmation',
+            config: {
+                auth: 'simple',
+                handler: (request, reply) => {
+
+                    server.app.requestedPackageId = request.payload.id;
+
+                    reply({ success: true });
+                }
+            }
+        });
+
         next();
     });
 };

@@ -115,4 +115,22 @@ describe('check', () => {
             });
         });
     });
+
+    it('reports auth errors', (done, onCleanup) => {
+
+        FakeServer.start(onCleanup, {}, (err, server) => {
+
+            expect(err).to.not.exist();
+
+            process.env.ETAR_HOST = server.select().info.uri;
+            process.env.ETAR_USERNAME = 'invalid';
+
+            EtarClient.check((err, packageInfo) => {
+
+                expect(err).to.be.an.error('TAR API check response: 401 Unauthorized');
+
+                done();
+            });
+        });
+    });
 });
