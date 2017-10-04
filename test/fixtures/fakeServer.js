@@ -48,7 +48,7 @@ internals.service.register = (server, options, next) => {
                             break;
 
                         default:
-                            reply(Fs.createReadStream(Path.join(__dirname, 'PaketoInfo.xml')));
+                            reply(Fs.createReadStream(Path.join(__dirname, 'packageInfo', `${request.params.userguid}.xml`)));
                     }
 
                 }

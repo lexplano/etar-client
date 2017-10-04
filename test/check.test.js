@@ -7,26 +7,54 @@ const Lab = require('lab');
 
 const { describe, it, expect, beforeEach, afterEach } = exports.lab = Lab.script();
 
+const testErrorFixture = (fixture, error) => {
+
+    return (done, onCleanup) => {
+
+        FakeServer.start(onCleanup, {}, (err, server) => {
+
+            expect(err).to.not.exist();
+
+            process.env.ETAR_HOST = server.select().info.uri;
+            process.env.ETAR_USERGUID = fixture;
+
+            EtarClient.check((err, packageInfo) => {
+
+                expect(err).to.be.an.error(error);
+
+                done();
+            });
+        });
+    };
+};
+
 describe('check', () => {
 
-    let envCopy;
+    let originalEnv;
+    let originalConsoleLog;
+
     beforeEach((done) => {
 
-        envCopy = Object.assign({}, process.env);
+        originalEnv = Object.assign({}, process.env);
 
         Object.assign(process.env, {
 
             ETAR_USERNAME: 'valid-user',
             ETAR_PASSWORD: 'valid-password',
-            ETAR_USERGUID: 'valid-userguid'
+            ETAR_USERGUID: 'valid'
         });
+
+        originalConsoleLog = console.log;
+        console.log = () => {};
 
         done();
     });
 
     afterEach((done) => {
 
-        process.env = envCopy;
+        process.env = originalEnv;
+        console.log = originalConsoleLog;
+
         done();
     });
 
@@ -133,4 +161,27 @@ describe('check', () => {
             });
         });
     });
+
+    it('reports XML errors', testErrorFixture('invalid-xml', 'Unclosed root tag\nLine: 7\nColumn: 0\nChar: '));
+
+    it('reports missing end date', testErrorFixture('no-end-date', 'End date not found'));
+
+    it('reports multiple end dates', testErrorFixture('multi-end-date', 'End date not found'));
+
+    it('invalid end date', testErrorFixture('invalid-end-date', 'Invalid end date'));
+
+    it('reports missing id', testErrorFixture('no-id', 'Package ID not found'));
+
+    it('reports multiple ids ', testErrorFixture('multi-id', 'Package ID not found'));
+
+    it('missing size', testErrorFixture('no-size', 'Package size not found'));
+
+    it('multiple size entries', testErrorFixture('multi-size', 'Package size not found'));
+
+    it('missing start date', testErrorFixture('no-start-date', 'Start date not found'));
+
+    it('multiple start dates', testErrorFixture('multi-start-date', 'Start date not found'));
+
+    it('invalid start date', testErrorFixture('invalid-start-date', 'Invalid start date'));
+
 });

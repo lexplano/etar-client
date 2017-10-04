@@ -12,7 +12,7 @@
     "etar-client": "./bin/etar-client.js"
   },
   "scripts": {
-    "test": "lab -t 67 --lint --verbose"
+    "test": "lab -t 74 --lint --verbose"
   },
   "repository": {
     "type": "git",
