@@ -4,15 +4,15 @@
   "description": "Client for https://www.e-tar.lt/ subscriptions",
   "main": "index.js",
   "files": [
-    "cli.js",
-    "index.js",
-    "lib/"
+    "bin/",
+    "lib/",
+    "index.js"
   ],
   "bin": {
-    "etar-client": "./cli.js"
+    "etar-client": "./bin/etar-client.js"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "lab -t 83 --lint --verbose"
   },
   "repository": {
     "type": "git",
@@ -25,17 +25,23 @@
   },
   "homepage": "https://github.com/lexplano/etar-client#readme",
   "engines": {
-    "node": ">=1"
+    "node": ">=8"
   },
   "dependencies": {
-    "asic-verify": "0.1.x",
+    "asic-verify": "0.2.x",
     "async-waterfall": "0.1.x",
-    "concat-stream": "1.x",
+    "concat-stream": "1.x.x",
     "mkdirp": "0.5.x",
-    "request": "2.x",
-    "request-progress": "0.3.x",
+    "request": "2.x.x",
+    "request-progress": "3.x.x",
     "xml2js": "0.4.x",
-    "yargs": "3.x",
-    "yauzl": "2.x"
+    "yargs": "9.x.x",
+    "yauzl": "2.x.x"
+  },
+  "devDependencies": {
+    "hapi": "16.x.x",
+    "hapi-auth-basic": "4.x.x",
+    "lab": "14.x.x",
+    "tmp": "0.0.33"
   }
 }
