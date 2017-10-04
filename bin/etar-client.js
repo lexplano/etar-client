@@ -19,7 +19,7 @@ const argv = Yargs
 
         yargs
             .usage('Usage: $0 download <storage path>')
-            .demand(2)
+            .demand(1)
             .help('help')
             .epilog(ENV_VAR_MESSAGE);
     })
@@ -27,14 +27,14 @@ const argv = Yargs
 
         yargs
             .usage('Usage: $0 verify <zip package>')
-            .demand(2)
+            .demand(1)
             .help('help');
     })
     .command('notify', 'Acknowledge retrieval to the TAR API', (yargs) => {
 
         yargs
             .usage('Usage: $0 notify <package ID>')
-            .demand(2)
+            .demand(1)
             .help('help')
             .epilog(ENV_VAR_MESSAGE);
     })
@@ -42,7 +42,7 @@ const argv = Yargs
 
         yargs
             .usage('Usage: $0 rotate <storage path>')
-            .demand(2)
+            .demand(1)
             .help('help')
             .epilog(ENV_VAR_MESSAGE);
     })
