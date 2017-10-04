@@ -41,6 +41,7 @@
   "devDependencies": {
     "hapi": "16.x.x",
     "hapi-auth-basic": "4.x.x",
-    "lab": "14.x.x"
+    "lab": "14.x.x",
+    "tmp": "0.0.33"
   }
 }

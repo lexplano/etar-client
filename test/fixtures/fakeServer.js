@@ -47,8 +47,33 @@ internals.service.register = (server, options, next) => {
                             reply('Maintenance').code(503).message('Temporarily Unavailable');
                             break;
 
+                        case 'download-503':
+                            reply(Fs.createReadStream(Path.join(__dirname, 'packageInfo', 'valid.xml')));
+                            break;
+
                         default:
                             reply(Fs.createReadStream(Path.join(__dirname, 'packageInfo', `${request.params.userguid}.xml`)));
+                    }
+
+                }
+            }
+        });
+
+        server.route({
+            method: 'GET',
+            path: '/portal/DataExportAPI/{userguid}/currentDataPacket',
+            config: {
+                auth: 'simple',
+                handler: (request, reply) => {
+
+                    switch (request.params.userguid) {
+
+                        case 'download-503':
+                            reply('Maintenance').code(503).message('Temporarily Unavailable');
+                            break;
+
+                        default:
+                            reply(Fs.createReadStream(Path.join(__dirname, 'packages', `${request.params.userguid}.zip`)));
                     }
 
                 }
