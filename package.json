@@ -12,7 +12,7 @@
     "etar-client": "./bin/etar-client.js"
   },
   "scripts": {
-    "test": "lab -t 74 --lint --verbose"
+    "test": "lab -t 83 --lint --verbose"
   },
   "repository": {
     "type": "git",
@@ -28,7 +28,7 @@
     "node": ">=8"
   },
   "dependencies": {
-    "asic-verify": "0.1.x",
+    "asic-verify": "0.2.x",
     "async-waterfall": "0.1.x",
     "concat-stream": "1.x.x",
     "mkdirp": "0.5.x",
