@@ -71,11 +71,11 @@ describe('check', () => {
                 expect(err).to.not.exist();
 
                 expect(packageInfo).to.equal({
-                    packageId: '187269AF-4633-482D-8E50-F0AA511419B9',
-                    packageFilename: '20170929-20170929.zip',
-                    packageApproxSize: 34603008,
-                    documentsFrom: '2017-09-29',
-                    documentsTo: '2017-09-29'
+                    packageId: 'FB8ABC12-66E4-4CD2-9500-70AA0EAA071A',
+                    packageFilename: '20160305-20160305.zip',
+                    packageApproxSize: 1048576,
+                    documentsFrom: '2016-03-05',
+                    documentsTo: '2016-03-05'
                 });
 
                 done();
