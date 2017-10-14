@@ -134,17 +134,7 @@ describe('download', () => {
         });
     });
 
-    it.skip('reports network errors', (done) => {
-
-        process.env.ETAR_HOST = 'http://0.0.0.0:666';
-
-        EtarClient.download(tmpDir.name, (err) => {
-
-            expect(err).to.be.an.error('connect ECONNREFUSED 0.0.0.0:666');
-
-            done();
-        });
-    });
+    it('reports network errors');
 
     it('reports missing env vars', (done) => {
 
@@ -176,21 +166,6 @@ describe('download', () => {
         });
     });
 
-    it.skip('reports file writing errors', (done, onCleanup) => {
-
-        FakeServer.start(onCleanup, {}, (err, server) => {
-
-            expect(err).to.not.exist();
-
-            process.env.ETAR_HOST = server.select().info.uri;
-
-            EtarClient.download(tmpDir.name, (err) => {
-
-                expect(err).to.be.an.error('TAR API download response: 503 Temporarily Unavailable');
-
-                done();
-            });
-        });
-    });
+    it('reports file writing errors');
 
 });

@@ -44,7 +44,7 @@ describe('notify', () => {
 
                 expect(err).to.not.exist();
 
-                expect(server.app.requestedPackageId).to.equal(packageId);
+                expect(server.app.notifiedPackageId).to.equal(packageId);
 
                 done();
             });

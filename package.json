@@ -12,7 +12,8 @@
     "etar-client": "./bin/etar-client.js"
   },
   "scripts": {
-    "test": "lab -t 83 --lint --verbose"
+    "test": "lab -t 96 --lint --verbose",
+    "test-watch": "nodemon -w lib -w test -- ./node_modules/.bin/lab -t 100 -L -r console -o stdout -r html -o coverage.html"
   },
   "repository": {
     "type": "git",
@@ -29,7 +30,7 @@
   },
   "dependencies": {
     "asic-verify": "0.2.x",
-    "async-waterfall": "0.1.x",
+    "async": "2.x.x",
     "concat-stream": "1.x.x",
     "mkdirp": "0.5.x",
     "request": "2.x.x",

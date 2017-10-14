@@ -48,6 +48,7 @@ internals.service.register = (server, options, next) => {
                             break;
 
                         case 'download-503':
+                        case 'notify-503':
                             reply(Fs.createReadStream(Path.join(__dirname, 'packageInfo', 'valid.xml')));
                             break;
 
@@ -87,9 +88,22 @@ internals.service.register = (server, options, next) => {
                 auth: 'simple',
                 handler: (request, reply) => {
 
-                    server.app.requestedPackageId = request.payload.id;
+                    if (!request.payload.id) {
+                        throw new Error('Invalid notify request');
+                    }
 
-                    reply({ success: true });
+                    server.app.notifiedPackageId = request.payload.id;
+
+                    switch (request.params.userguid) {
+
+                        case '423':
+                        case 'notify-503':
+                            reply('Maintenance').code(503).message('Temporarily Unavailable');
+                            break;
+
+                        default:
+                            reply({ success: true });
+                    }
                 }
             }
         });
