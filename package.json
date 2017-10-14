@@ -30,7 +30,7 @@
   },
   "dependencies": {
     "asic-verify": "0.2.x",
-    "async-waterfall": "0.1.x",
+    "async": "2.x.x",
     "concat-stream": "1.x.x",
     "mkdirp": "0.5.x",
     "request": "2.x.x",
