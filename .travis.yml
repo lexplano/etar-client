@@ -3,3 +3,12 @@ sudo: false
 matrix:
   include:
     - node_js: "8"
+deploy:
+  - provider: npm
+    skip_cleanup: true
+    email: "hello@dominykas.com"
+    api_key:
+      secure: "Dujg5Rermh4orJT8G+l+uMpFsI65YJk+E1WcnlZhPHaA1LkL3Ze8yRzX8py+be5xm63JAgrxyHSM42P5QOV2TsSGTruHbMI6y2OUw3LEGmeJJzWm5O4iu02OuEOSwBU5TprBZgioSPBqSNIPOxG8sJfmV1jc3vDHBWKdLgEiaakzwBg/NtADCIqOVjNUjBEfsO/y3n8/kUVLgiy7P3Q6e5Pgw/2qSmOq9cKpIOx+33vApfHnvxB4d6SKho9rpE4dIzjqHIxaHBV3SbxOzfE5ds/095fO45ACzXFBEbnx0Kbp1W2lQQgAK3nNQFoli4rYzEku5N/imGllKUiDOhOL/k1wzNkVzDjNC1NgwQQDMZeObsWnuxwhABtX1I9QU90kXONO+kDMclgsKMagop6bYI26JAQuWQLfkx0idPgNlFlUpRT6es+JaYmLZof0TYb7bGq7AiDZ/REW8gblCRGCVx2kRcYJSe9fdHdQf6g6ukMWFcdNufyNjB9z6cD3LSuoJqTidYb4yGMIAjKcIaE9kWwJCxahio5AROQjVNA2v/wNA7NWZTQVhTzJInlVVHF3bJthoEScCDjYtiasbEh8kXMkoRrGMWl33VR1t83SXIrooaslHIopZ33a6+fPS0X9NB6REGzcyx4QHN3YuV7czk7rmF1v3tMAT1pU4SaT6Co="
+    on:
+      tags: true
+      node_js: "8"
