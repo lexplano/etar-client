@@ -2,13 +2,22 @@ language: node_js
 sudo: false
 matrix:
   include:
-    - node_js: "8"
+  - node_js: '8'
+env:
+  global:
+    secure: xOGlE94kLFx6SsfzFb0CnvDGEuMODL5pL8Xh/GxHZELXKylVWlMKSe3oAs+e9oKhqqU6+8zi73AIvOmgkP3BVUGijTnzR0ygG9oyqBDtajsnlSN3GbNekMeBEwraHgurUYd3yaaYIVHydR5OWaoP93udycwzxiaB2+xVObZw8TdgXS4wKcCa/TvEXDJc0Rb8j2F7LZV7SmigNZsFlZQfQMEuBKcqZ10Ucl2l6M/VSW7u1RgU6dC0XPu/BRbzDJTjsYGrrdZ9WsSITC6H2ZdvB0c3PIEyGV5SNtmHdpWVTZWpc9WoMIA1yfbfWwKDXq/BD0jMmWNexvF7t+9BLsNV6PEHNu1gjYEklhM20ch9zL+7f+mPtolriRDenyaDKJ8I+6b9sXvAHKe2dULMM0ITYWDz8fDvQkJeUq3L0ckFZ7OAoIvTDWtWDSHw2ly9wS54SRRlDZUXaMz6UPdYc34rMV8MtS1RCseCUN7mnPOB9CVOHT4rjPP4d1YcsLgd6cuJgrTNSEOGAwEQDMkmPW+1JDvg29HpoUFhToLYK/dtXCKjb7qb/webVeFihGZN8zNQaa5iCYTLNOGyxWCF04FsBevKGjeu7NDWhC+TVFZy1Gn3sq3vkFDIds39vKBGD4ho/cz2o/haX37MNVKCtTSyT60Kkm7taKt3+mBTD6cuiSw=
 deploy:
-  - provider: npm
-    skip_cleanup: true
-    email: "hello@dominykas.com"
-    api_key:
-      secure: "Dujg5Rermh4orJT8G+l+uMpFsI65YJk+E1WcnlZhPHaA1LkL3Ze8yRzX8py+be5xm63JAgrxyHSM42P5QOV2TsSGTruHbMI6y2OUw3LEGmeJJzWm5O4iu02OuEOSwBU5TprBZgioSPBqSNIPOxG8sJfmV1jc3vDHBWKdLgEiaakzwBg/NtADCIqOVjNUjBEfsO/y3n8/kUVLgiy7P3Q6e5Pgw/2qSmOq9cKpIOx+33vApfHnvxB4d6SKho9rpE4dIzjqHIxaHBV3SbxOzfE5ds/095fO45ACzXFBEbnx0Kbp1W2lQQgAK3nNQFoli4rYzEku5N/imGllKUiDOhOL/k1wzNkVzDjNC1NgwQQDMZeObsWnuxwhABtX1I9QU90kXONO+kDMclgsKMagop6bYI26JAQuWQLfkx0idPgNlFlUpRT6es+JaYmLZof0TYb7bGq7AiDZ/REW8gblCRGCVx2kRcYJSe9fdHdQf6g6ukMWFcdNufyNjB9z6cD3LSuoJqTidYb4yGMIAjKcIaE9kWwJCxahio5AROQjVNA2v/wNA7NWZTQVhTzJInlVVHF3bJthoEScCDjYtiasbEh8kXMkoRrGMWl33VR1t83SXIrooaslHIopZ33a6+fPS0X9NB6REGzcyx4QHN3YuV7czk7rmF1v3tMAT1pU4SaT6Co="
-    on:
-      tags: true
-      node_js: "8"
+- provider: npm
+  skip_cleanup: true
+  email: hello@dominykas.com
+  api_key:
+    secure: Dujg5Rermh4orJT8G+l+uMpFsI65YJk+E1WcnlZhPHaA1LkL3Ze8yRzX8py+be5xm63JAgrxyHSM42P5QOV2TsSGTruHbMI6y2OUw3LEGmeJJzWm5O4iu02OuEOSwBU5TprBZgioSPBqSNIPOxG8sJfmV1jc3vDHBWKdLgEiaakzwBg/NtADCIqOVjNUjBEfsO/y3n8/kUVLgiy7P3Q6e5Pgw/2qSmOq9cKpIOx+33vApfHnvxB4d6SKho9rpE4dIzjqHIxaHBV3SbxOzfE5ds/095fO45ACzXFBEbnx0Kbp1W2lQQgAK3nNQFoli4rYzEku5N/imGllKUiDOhOL/k1wzNkVzDjNC1NgwQQDMZeObsWnuxwhABtX1I9QU90kXONO+kDMclgsKMagop6bYI26JAQuWQLfkx0idPgNlFlUpRT6es+JaYmLZof0TYb7bGq7AiDZ/REW8gblCRGCVx2kRcYJSe9fdHdQf6g6ukMWFcdNufyNjB9z6cD3LSuoJqTidYb4yGMIAjKcIaE9kWwJCxahio5AROQjVNA2v/wNA7NWZTQVhTzJInlVVHF3bJthoEScCDjYtiasbEh8kXMkoRrGMWl33VR1t83SXIrooaslHIopZ33a6+fPS0X9NB6REGzcyx4QHN3YuV7czk7rmF1v3tMAT1pU4SaT6Co=
+  on:
+    tags: true
+    node_js: '8'
+after_deploy:
+- docker login -u=lexplano -p="$DOCKER_PASSWORD"
+- docker build -t lexplano/etar-client .
+- docker tag lexplano/etar-client lexplano/etar-client:$TRAVIS_TAG
+- docker push lexplano/etar-client
+- docker push lexplano/etar-client:$TRAVIS_TAG
