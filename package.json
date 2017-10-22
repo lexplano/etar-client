@@ -1,6 +1,6 @@
 {
   "name": "@lexplano/etar-client",
-  "version": "0.6.3",
+  "version": "0.7.0",
   "description": "Client for https://www.e-tar.lt/ subscriptions",
   "main": "index.js",
   "files": [
