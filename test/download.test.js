@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
-import { server, state, TEST_HOST } from './fixtures/fakeServer.js';
+import { server, state } from './fixtures/fakeServer.js';
 
 import Fs from 'node:fs';
+import Os from 'node:os';
 import Path from 'node:path';
-import Tmp from 'tmp';
 import { download } from '..';
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'bypass' }));
@@ -27,20 +27,18 @@ describe('download', () => {
       ETAR_USERNAME: 'valid-user',
       ETAR_PASSWORD: 'valid-password',
       ETAR_USERGUID: 'valid',
-      ETAR_HOST: TEST_HOST,
     });
 
-    tmpDir = Tmp.dirSync({ unsafeCleanup: true });
+    tmpDir = Fs.mkdtempSync(Path.join(Os.tmpdir(), 'etar-'));
   });
 
   afterEach(() => {
     process.env = originalEnv;
     console.log = originalConsoleLog;
-    tmpDir.removeCallback();
   });
 
   it('downloads the package', async () => {
-    const { packagePath, expectedPackageInfo } = await download(tmpDir.name);
+    const { packagePath, expectedPackageInfo } = await download(tmpDir);
 
     expect(packagePath).toContain('20160305-20160305.zip');
 
@@ -60,19 +58,19 @@ describe('download', () => {
   it('reports broken package checks', async () => {
     process.env.ETAR_USERGUID = 'no-id';
 
-    await expect(download(tmpDir.name)).rejects.toThrow('Package ID not found');
+    await expect(download(tmpDir)).rejects.toThrow('Package ID not found');
   });
 
   it('reports no package yet', async () => {
     process.env.ETAR_USERGUID = '423';
 
-    await expect(download(tmpDir.name)).rejects.toThrow('No package available yet');
+    await expect(download(tmpDir)).rejects.toThrow('No package available yet');
   });
 
   it('reports double download', async () => {
-    const { packagePath } = await download(tmpDir.name);
+    const { packagePath } = await download(tmpDir);
 
-    await expect(download(tmpDir.name)).rejects.toThrow(`Package exists: ${packagePath}`);
+    await expect(download(tmpDir)).rejects.toThrow(`Package exists: ${packagePath}`);
   });
 
   it('reports network errors');
@@ -80,13 +78,13 @@ describe('download', () => {
   it('reports missing env vars', async () => {
     delete process.env.ETAR_USERNAME;
 
-    await expect(download(tmpDir.name)).rejects.toThrow('Missing in process.env: ETAR_USERNAME');
+    await expect(download(tmpDir)).rejects.toThrow('Missing in process.env: ETAR_USERNAME');
   });
 
   it('reports server errors', async () => {
     process.env.ETAR_USERGUID = 'download-503';
 
-    await expect(download(tmpDir.name)).rejects.toThrow('TAR API download response: 503 Temporarily Unavailable');
+    await expect(download(tmpDir)).rejects.toThrow('TAR API download response: 503 Temporarily Unavailable');
   });
 
   it('reports file writing errors');

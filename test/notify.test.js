@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
-import { server, state, TEST_HOST } from './fixtures/fakeServer.js';
+import { http, HttpResponse } from 'msw';
+import { server, state } from './fixtures/fakeServer.js';
 import { notify } from '..';
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'bypass' }));
@@ -19,7 +20,6 @@ describe('notify', () => {
       ETAR_USERNAME: 'valid-user',
       ETAR_PASSWORD: 'valid-password',
       ETAR_USERGUID: 'valid-userguid',
-      ETAR_HOST: TEST_HOST,
     });
   });
 
@@ -35,9 +35,14 @@ describe('notify', () => {
   });
 
   it('reports network errors', async () => {
-    process.env.ETAR_HOST = 'http://0.0.0.0:666';
+    server.use(
+      http.post(
+        'https://www.e-tar.lt/portal/DataExportAPI/:userguid/packetReceptionConfirmation',
+        () => HttpResponse.error(),
+      ),
+    );
 
-    await expect(notify('package-id')).rejects.toThrow('connect ECONNREFUSED 0.0.0.0:666');
+    await expect(notify('package-id')).rejects.toThrow();
   });
 
   it('reports missing env vars', async () => {

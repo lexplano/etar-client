@@ -5,7 +5,7 @@ import Path from 'node:path';
 
 const __dirname = import.meta.dirname;
 
-export const TEST_HOST = 'http://localhost';
+const ETAR_HOST = 'https://www.e-tar.lt';
 
 export const state = {
   notifiedPackageId: null,
@@ -33,7 +33,7 @@ function unauthorized() {
 }
 
 const handlers = [
-  http.get(`${TEST_HOST}/portal/DataExportAPI/:userguid/currentDataPacketInfo`, ({ request, params }) => {
+  http.get(`${ETAR_HOST}/portal/DataExportAPI/:userguid/currentDataPacketInfo`, ({ request, params }) => {
     if (!checkAuth(request)) {
       return unauthorized();
     }
@@ -53,7 +53,7 @@ const handlers = [
     return new HttpResponse(xmlContent, { headers: { 'Content-Type': 'application/xml' } });
   }),
 
-  http.get(`${TEST_HOST}/portal/DataExportAPI/:userguid/currentDataPacket`, ({ request, params }) => {
+  http.get(`${ETAR_HOST}/portal/DataExportAPI/:userguid/currentDataPacket`, ({ request, params }) => {
     if (!checkAuth(request)) {
       return unauthorized();
     }
@@ -68,7 +68,7 @@ const handlers = [
     return new HttpResponse(zipContent, { headers: { 'Content-Type': 'application/zip' } });
   }),
 
-  http.post(`${TEST_HOST}/portal/DataExportAPI/:userguid/packetReceptionConfirmation`, async ({ request, params }) => {
+  http.post(`${ETAR_HOST}/portal/DataExportAPI/:userguid/packetReceptionConfirmation`, async ({ request, params }) => {
     if (!checkAuth(request)) {
       return unauthorized();
     }
