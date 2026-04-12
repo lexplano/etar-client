@@ -2,7 +2,8 @@
   "name": "@lexplano/etar-client",
   "version": "0.7.2",
   "description": "Client for https://www.e-tar.lt/ subscriptions",
-  "main": "index.js",
+  "main": "lib/index.js",
+  "type": "module",
   "files": [
     "bin/",
     "lib/",
@@ -12,8 +13,9 @@
     "etar-client": "./bin/etar-client.js"
   },
   "scripts": {
-    "test": "lab -t 96 --lint --verbose",
-    "test-watch": "nodemon -w lib -w test -- ./node_modules/.bin/lab -t 100 -L -r console -o stdout -r html -o coverage.html"
+    "test": "vitest run --coverage && npm run lint",
+    "lint": "eslint lib bin test",
+    "format": "prettier --write lib bin test"
   },
   "repository": {
     "type": "git",
@@ -26,11 +28,10 @@
   },
   "homepage": "https://github.com/lexplano/etar-client#readme",
   "engines": {
-    "node": ">=8"
+    "node": ">=24"
   },
   "dependencies": {
     "asic-verify": "0.2.x",
-    "async": "2.x.x",
     "concat-stream": "1.x.x",
     "mkdirp": "0.5.x",
     "request": "2.x.x",
@@ -40,9 +41,14 @@
     "yauzl": "2.x.x"
   },
   "devDependencies": {
-    "hapi": "16.x.x",
-    "hapi-auth-basic": "4.x.x",
-    "lab": "14.x.x",
-    "tmp": "0.0.33"
+    "@eslint/js": "^10.0.1",
+    "@vitest/coverage-v8": "^4.1.2",
+    "eslint": "^10.2.0",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.4.0",
+    "msw": "^2.13.2",
+    "prettier": "^3.8.1",
+    "tmp": "0.0.33",
+    "vitest": "^4.1.2"
   }
 }

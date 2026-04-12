@@ -1,198 +1,120 @@
-'use strict';
+import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
+import { server, state, TEST_HOST } from './fixtures/fakeServer.js';
 
-const EtarClient = require('../index');
-const FakeServer = require('./fixtures/fakeServer');
+import Fs from 'node:fs';
+import Path from 'node:path';
+import Tmp from 'tmp';
+import { rotate } from '..';
 
-const Fs = require('fs');
-const Lab = require('lab');
-const Path = require('path');
-const Tmp = require('tmp');
-
-const { describe, it, expect, beforeEach, afterEach } = exports.lab = Lab.script();
+beforeAll(() => server.listen({ onUnhandledRequest: 'bypass' }));
+afterEach(() => {
+  state.notifiedPackageId = null;
+  server.resetHandlers();
+});
+afterAll(() => server.close());
 
 describe('rotate', () => {
+  let originalEnv;
+  let originalConsoleLog;
+  let tmpDir;
 
-    let originalEnv;
-    let originalConsoleLog;
-    let tmpDir;
+  beforeEach(() => {
+    originalEnv = Object.assign({}, process.env);
+    originalConsoleLog = console.log;
+    console.log = () => {};
 
-    beforeEach((done) => {
-
-        originalEnv = Object.assign({}, process.env);
-
-        Object.assign(process.env, {
-
-            ETAR_USERNAME: 'valid-user',
-            ETAR_PASSWORD: 'valid-password',
-            ETAR_USERGUID: 'valid'
-        });
-
-        originalConsoleLog = console.log;
-        console.log = () => {};
-
-        tmpDir = Tmp.dirSync({ unsafeCleanup: true });
-
-        done();
+    Object.assign(process.env, {
+      ETAR_USERNAME: 'valid-user',
+      ETAR_PASSWORD: 'valid-password',
+      ETAR_USERGUID: 'valid',
+      ETAR_HOST: TEST_HOST,
     });
 
-    afterEach((done) => {
+    tmpDir = Tmp.dirSync({ unsafeCleanup: true });
+  });
 
-        process.env = originalEnv;
-        console.log = originalConsoleLog;
-        tmpDir.removeCallback();
+  afterEach(() => {
+    process.env = originalEnv;
+    console.log = originalConsoleLog;
+    tmpDir.removeCallback();
+  });
 
-        done();
+  it('notifies server', async () => {
+    Fs.copyFileSync(
+      Path.join(import.meta.dirname, 'fixtures', 'packages', 'valid.zip'),
+      Path.join(tmpDir.name, '20160305-20160305.zip'),
+    );
+
+    const pkgInfo = await rotate(tmpDir.name);
+
+    expect(state.notifiedPackageId).toBe('FB8ABC12-66E4-4CD2-9500-70AA0EAA071A');
+
+    expect(pkgInfo).toEqual({
+      packageId: 'FB8ABC12-66E4-4CD2-9500-70AA0EAA071A',
+      packageFilename: '20160305-20160305.zip',
+      packageApproxSize: 1048576,
+      documentsFrom: '2016-03-05',
+      documentsTo: '2016-03-05',
     });
+  });
 
-    it('notifies server', (done, onCleanup) => {
+  it('reports broken package checks', async () => {
+    process.env.ETAR_USERGUID = 'no-id';
 
-        FakeServer.start(onCleanup, {}, (err, server) => {
+    await expect(rotate(tmpDir.name)).rejects.toThrow('Package ID not found');
+  });
 
-            expect(err).to.not.exist();
+  it('does not notify when no package', async () => {
+    process.env.ETAR_USERGUID = '423';
 
-            process.env.ETAR_HOST = server.select().info.uri;
+    const pkgInfo = await rotate(tmpDir.name);
 
-            Fs.copyFileSync(Path.join(__dirname, 'fixtures', 'packages', 'valid.zip'), Path.join(tmpDir.name, '20160305-20160305.zip'));
+    expect(state.notifiedPackageId).toBeNull();
+    expect(pkgInfo).toBeNull();
+  });
 
-            EtarClient.rotate(tmpDir.name, (err, pkgInfo) => {
+  it('reports invalid archive', async () => {
+    Fs.copyFileSync(
+      Path.join(import.meta.dirname, 'fixtures', 'packages', 'no-sig.zip'),
+      Path.join(tmpDir.name, '20160305-20160305.zip'),
+    );
 
-                expect(server.app.notifiedPackageId).to.equal('FB8ABC12-66E4-4CD2-9500-70AA0EAA071A');
+    await expect(rotate(tmpDir.name)).rejects.toThrow('Could not find exactly one entry for META-INF/signatures.xml');
 
-                expect(err).to.not.exist();
+    expect(state.notifiedPackageId).toBeNull();
+  });
 
-                expect(pkgInfo).to.equal({
-                    packageId: 'FB8ABC12-66E4-4CD2-9500-70AA0EAA071A',
-                    packageFilename: '20160305-20160305.zip',
-                    packageApproxSize: 1048576,
-                    documentsFrom: '2016-03-05',
-                    documentsTo: '2016-03-05'
-                });
+  it('reports package ID mismatch', async () => {
+    process.env.ETAR_USERGUID = 'valid2';
 
-                done();
-            });
-        });
-    });
+    Fs.copyFileSync(
+      Path.join(import.meta.dirname, 'fixtures', 'packages', 'valid.zip'),
+      Path.join(tmpDir.name, '20160305-20160305.zip'),
+    );
 
-    it('reports broken package checks', (done, onCleanup) => {
+    await expect(rotate(tmpDir.name)).rejects.toThrow(
+      'Package ID mismatch. Server: 00000000-66E4-4CD2-9500-70AA0EAA071A, local: FB8ABC12-66E4-4CD2-9500-70AA0EAA071A',
+    );
 
-        FakeServer.start(onCleanup, {}, (err, server) => {
+    expect(state.notifiedPackageId).toBeNull();
+  });
 
-            expect(err).to.not.exist();
+  it('reports package not present locally', async () => {
+    await expect(rotate(tmpDir.name)).rejects.toThrow(
+      /^ENOENT: no such file or directory, open '.*\/20160305-20160305\.zip'$/,
+    );
 
-            process.env.ETAR_HOST = server.select().info.uri;
-            process.env.ETAR_USERGUID = 'no-id';
+    expect(state.notifiedPackageId).toBeNull();
+  });
 
-            EtarClient.rotate(tmpDir.name, (err) => {
+  it('reports local package zip no info', async () => {
+    Fs.copyFileSync(
+      Path.join(import.meta.dirname, 'fixtures', 'packages', 'no-info.zip'),
+      Path.join(tmpDir.name, '20160305-20160305.zip'),
+    );
 
-                expect(err).to.be.an.error('Package ID not found');
+    await expect(rotate(tmpDir.name)).rejects.toThrow(/^No PaketoInfo.xml in .*\/20160305-20160305\.zip$/);
 
-                done();
-            });
-        });
-    });
-
-    it('does not notify when no package', (done, onCleanup) => {
-
-        FakeServer.start(onCleanup, {}, (err, server) => {
-
-            expect(err).to.not.exist();
-
-            process.env.ETAR_HOST = server.select().info.uri;
-            process.env.ETAR_USERGUID = '423';
-
-            EtarClient.rotate(tmpDir.name, (err, pkgInfo) => {
-
-                expect(server.app.notifiedPackageId).not.to.exist();
-
-                expect(err).not.to.exist();
-                expect(pkgInfo).to.equal(null);
-
-                done();
-            });
-        });
-    });
-
-    it('reports invalid archive', (done, onCleanup) => {
-
-        FakeServer.start(onCleanup, {}, (err, server) => {
-
-            expect(err).to.not.exist();
-
-            process.env.ETAR_HOST = server.select().info.uri;
-
-            Fs.copyFileSync(Path.join(__dirname, 'fixtures', 'packages', 'no-sig.zip'), Path.join(tmpDir.name, '20160305-20160305.zip'));
-
-            EtarClient.rotate(tmpDir.name, (err, pkgInfo) => {
-
-                expect(server.app.notifiedPackageId).not.to.exist();
-
-                expect(err).to.be.an.error('Could not find exactly one entry for META-INF/signatures.xml');
-
-                done();
-            });
-        });
-    });
-
-    it('reports package ID mismatch', (done, onCleanup) => {
-
-        FakeServer.start(onCleanup, {}, (err, server) => {
-
-            expect(err).to.not.exist();
-
-            process.env.ETAR_HOST = server.select().info.uri;
-            process.env.ETAR_USERGUID = 'valid2';
-
-            Fs.copyFileSync(Path.join(__dirname, 'fixtures', 'packages', 'valid.zip'), Path.join(tmpDir.name, '20160305-20160305.zip'));
-
-            EtarClient.rotate(tmpDir.name, (err, pkgInfo) => {
-
-                expect(server.app.notifiedPackageId).not.to.exist();
-
-                expect(err).to.be.an.error('Package ID mismatch. Server: 00000000-66E4-4CD2-9500-70AA0EAA071A, local: FB8ABC12-66E4-4CD2-9500-70AA0EAA071A');
-
-                done();
-            });
-        });
-    });
-
-    it('reports package not present locally', (done, onCleanup) => {
-
-        FakeServer.start(onCleanup, {}, (err, server) => {
-
-            expect(err).to.not.exist();
-
-            process.env.ETAR_HOST = server.select().info.uri;
-
-            EtarClient.rotate(tmpDir.name, (err, pkgInfo) => {
-
-                expect(server.app.notifiedPackageId).not.to.exist();
-
-                expect(err).to.be.an.error(/^ENOENT: no such file or directory, open '.*\/20160305-20160305.zip'$/);
-
-                done();
-            });
-        });
-    });
-
-    it('reports local package zip no info', (done, onCleanup) => {
-
-        FakeServer.start(onCleanup, {}, (err, server) => {
-
-            expect(err).to.not.exist();
-
-            process.env.ETAR_HOST = server.select().info.uri;
-
-            Fs.copyFileSync(Path.join(__dirname, 'fixtures', 'packages', 'no-info.zip'), Path.join(tmpDir.name, '20160305-20160305.zip'));
-
-            EtarClient.rotate(tmpDir.name, (err, pkgInfo) => {
-
-                expect(server.app.notifiedPackageId).not.to.exist();
-
-                expect(err).to.be.an.error(/^No PaketoInfo.xml in .*\/20160305-20160305.zip$/);
-
-                done();
-            });
-        });
-    });
-
+    expect(state.notifiedPackageId).toBeNull();
+  });
 });

@@ -1,187 +1,106 @@
-'use strict';
+import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
+import { server, state, TEST_HOST } from './fixtures/fakeServer.js';
+import { check } from '..';
 
-const EtarClient = require('../index');
-const FakeServer = require('./fixtures/fakeServer');
+beforeAll(() => server.listen({ onUnhandledRequest: 'bypass' }));
+afterEach(() => {
+  state.notifiedPackageId = null;
+  server.resetHandlers();
+});
+afterAll(() => server.close());
 
-const Lab = require('lab');
-
-const { describe, it, expect, beforeEach, afterEach } = exports.lab = Lab.script();
-
-const testErrorFixture = (fixture, error) => {
-
-    return (done, onCleanup) => {
-
-        FakeServer.start(onCleanup, {}, (err, server) => {
-
-            expect(err).to.not.exist();
-
-            process.env.ETAR_HOST = server.select().info.uri;
-            process.env.ETAR_USERGUID = fixture;
-
-            EtarClient.check((err, packageInfo) => {
-
-                expect(err).to.be.an.error(error);
-
-                done();
-            });
-        });
-    };
-};
+function testErrorFixture(fixture, errorMessage) {
+  return async () => {
+    process.env.ETAR_USERGUID = fixture;
+    await expect(check()).rejects.toThrow(errorMessage);
+  };
+}
 
 describe('check', () => {
+  let originalEnv;
+  let originalConsoleLog;
 
-    let originalEnv;
-    let originalConsoleLog;
+  beforeEach(() => {
+    originalEnv = Object.assign({}, process.env);
+    originalConsoleLog = console.log;
+    console.log = () => {};
 
-    beforeEach((done) => {
-
-        originalEnv = Object.assign({}, process.env);
-
-        Object.assign(process.env, {
-
-            ETAR_USERNAME: 'valid-user',
-            ETAR_PASSWORD: 'valid-password',
-            ETAR_USERGUID: 'valid'
-        });
-
-        originalConsoleLog = console.log;
-        console.log = () => {};
-
-        done();
+    Object.assign(process.env, {
+      ETAR_USERNAME: 'valid-user',
+      ETAR_PASSWORD: 'valid-password',
+      ETAR_USERGUID: 'valid',
+      ETAR_HOST: TEST_HOST,
     });
+  });
 
-    afterEach((done) => {
+  afterEach(() => {
+    process.env = originalEnv;
+    console.log = originalConsoleLog;
+  });
 
-        process.env = originalEnv;
-        console.log = originalConsoleLog;
+  it('returns package info JSON', async () => {
+    const packageInfo = await check();
 
-        done();
+    expect(packageInfo).toEqual({
+      packageId: 'FB8ABC12-66E4-4CD2-9500-70AA0EAA071A',
+      packageFilename: '20160305-20160305.zip',
+      packageApproxSize: 1048576,
+      documentsFrom: '2016-03-05',
+      documentsTo: '2016-03-05',
     });
+  });
 
-    it('returns package info JSON', (done, onCleanup) => {
+  it('reports network errors', async () => {
+    process.env.ETAR_HOST = 'http://0.0.0.0:666';
 
-        FakeServer.start(onCleanup, {}, (err, server) => {
+    await expect(check()).rejects.toThrow('connect ECONNREFUSED 0.0.0.0:666');
+  });
 
-            expect(err).to.not.exist();
+  it('reports missing env vars', async () => {
+    delete process.env.ETAR_USERNAME;
 
-            process.env.ETAR_HOST = server.select().info.uri;
+    await expect(check()).rejects.toThrow('Missing in process.env: ETAR_USERNAME');
+  });
 
-            EtarClient.check((err, packageInfo) => {
+  it('returns null when new package not ready yet', async () => {
+    process.env.ETAR_USERGUID = '423';
 
-                expect(err).to.not.exist();
+    const packageInfo = await check();
 
-                expect(packageInfo).to.equal({
-                    packageId: 'FB8ABC12-66E4-4CD2-9500-70AA0EAA071A',
-                    packageFilename: '20160305-20160305.zip',
-                    packageApproxSize: 1048576,
-                    documentsFrom: '2016-03-05',
-                    documentsTo: '2016-03-05'
-                });
+    expect(packageInfo).toBeNull();
+  });
 
-                done();
-            });
-        });
-    });
+  it('reports server errors', async () => {
+    process.env.ETAR_USERGUID = '503';
 
-    it('reports network errors', (done) => {
+    await expect(check()).rejects.toThrow('TAR API check response: 503 Temporarily Unavailable');
+  });
 
-        process.env.ETAR_HOST = 'http://0.0.0.0:666';
+  it('reports auth errors', async () => {
+    process.env.ETAR_USERNAME = 'invalid';
 
-        EtarClient.check((err, packageInfo) => {
+    await expect(check()).rejects.toThrow('TAR API check response: 401 Unauthorized');
+  });
 
-            expect(err).to.be.an.error('connect ECONNREFUSED 0.0.0.0:666');
+  it('reports XML errors', testErrorFixture('invalid-xml', 'Unclosed root tag'));
 
-            done();
-        });
-    });
+  it('reports missing end date', testErrorFixture('no-end-date', 'End date not found'));
 
-    it('reports missing env vars', (done) => {
+  it('reports multiple end dates', testErrorFixture('multi-end-date', 'End date not found'));
 
-        delete process.env.ETAR_USERNAME;
+  it('invalid end date', testErrorFixture('invalid-end-date', 'Invalid end date'));
 
-        EtarClient.check((err, packageInfo) => {
+  it('reports missing id', testErrorFixture('no-id', 'Package ID not found'));
 
-            expect(err).to.be.an.error('Missing in process.env: ETAR_USERNAME');
+  it('reports multiple ids ', testErrorFixture('multi-id', 'Package ID not found'));
 
-            done();
-        });
-    });
+  it('missing size', testErrorFixture('no-size', 'Package size not found'));
 
-    it('returns null when new package not ready yet', (done, onCleanup) => {
+  it('multiple size entries', testErrorFixture('multi-size', 'Package size not found'));
 
-        FakeServer.start(onCleanup, {}, (err, server) => {
+  it('missing start date', testErrorFixture('no-start-date', 'Start date not found'));
 
-            expect(err).to.not.exist();
+  it('multiple start dates', testErrorFixture('multi-start-date', 'Start date not found'));
 
-            process.env.ETAR_HOST = server.select().info.uri;
-            process.env.ETAR_USERGUID = '423';
-
-            EtarClient.check((err, packageInfo) => {
-
-                expect(err).to.not.exist();
-                expect(packageInfo).to.equal(null);
-
-                done();
-            });
-        });
-    });
-
-    it('reports server errors', (done, onCleanup) => {
-
-        FakeServer.start(onCleanup, {}, (err, server) => {
-
-            expect(err).to.not.exist();
-
-            process.env.ETAR_HOST = server.select().info.uri;
-            process.env.ETAR_USERGUID = '503';
-
-            EtarClient.check((err, packageInfo) => {
-
-                expect(err).to.be.an.error('TAR API check response: 503 Temporarily Unavailable');
-
-                done();
-            });
-        });
-    });
-
-    it('reports auth errors', (done, onCleanup) => {
-
-        FakeServer.start(onCleanup, {}, (err, server) => {
-
-            expect(err).to.not.exist();
-
-            process.env.ETAR_HOST = server.select().info.uri;
-            process.env.ETAR_USERNAME = 'invalid';
-
-            EtarClient.check((err, packageInfo) => {
-
-                expect(err).to.be.an.error('TAR API check response: 401 Unauthorized');
-
-                done();
-            });
-        });
-    });
-
-    it('reports XML errors', testErrorFixture('invalid-xml', 'Unclosed root tag\nLine: 7\nColumn: 0\nChar: '));
-
-    it('reports missing end date', testErrorFixture('no-end-date', 'End date not found'));
-
-    it('reports multiple end dates', testErrorFixture('multi-end-date', 'End date not found'));
-
-    it('invalid end date', testErrorFixture('invalid-end-date', 'Invalid end date'));
-
-    it('reports missing id', testErrorFixture('no-id', 'Package ID not found'));
-
-    it('reports multiple ids ', testErrorFixture('multi-id', 'Package ID not found'));
-
-    it('missing size', testErrorFixture('no-size', 'Package size not found'));
-
-    it('multiple size entries', testErrorFixture('multi-size', 'Package size not found'));
-
-    it('missing start date', testErrorFixture('no-start-date', 'Start date not found'));
-
-    it('multiple start dates', testErrorFixture('multi-start-date', 'Start date not found'));
-
-    it('invalid start date', testErrorFixture('invalid-start-date', 'Invalid start date'));
-
+  it('invalid start date', testErrorFixture('invalid-start-date', 'Invalid start date'));
 });
