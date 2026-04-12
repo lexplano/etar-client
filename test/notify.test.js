@@ -1,95 +1,57 @@
-'use strict';
-
-const EtarClient = require('../index');
-const FakeServer = require('./fixtures/fakeServer');
-
-const Lab = require('lab');
-
-const { describe, it, expect, beforeEach, afterEach } = exports.lab = Lab.script();
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { http, HttpResponse } from 'msw';
+import { createFakeServer } from './fixtures/fakeServer.js';
+import { notify } from '..';
 
 describe('notify', () => {
+  let server;
+  let state;
+  let envCopy;
 
-    let envCopy;
-    beforeEach((done) => {
+  beforeEach(() => {
+    ({ server, state } = createFakeServer());
+    server.listen({ onUnhandledRequest: 'bypass' });
+    envCopy = Object.assign({}, process.env);
 
-        envCopy = Object.assign({}, process.env);
-
-        Object.assign(process.env, {
-
-            ETAR_USERNAME: 'valid-user',
-            ETAR_PASSWORD: 'valid-password',
-            ETAR_USERGUID: 'valid-userguid'
-        });
-
-        done();
+    Object.assign(process.env, {
+      ETAR_USERNAME: 'valid-user',
+      ETAR_PASSWORD: 'valid-password',
+      ETAR_USERGUID: 'valid-userguid',
     });
+  });
 
-    afterEach((done) => {
+  afterEach(() => {
+    process.env = envCopy;
+    server.close();
+  });
 
-        process.env = envCopy;
-        done();
-    });
+  it('notifies server', async () => {
+    const packageId = `package-id-${Date.now()}`;
+    await notify(packageId);
 
-    it('notifies server', (done, onCleanup) => {
+    expect(state.notifiedPackageId).toBe(packageId);
+  });
 
-        FakeServer.start(onCleanup, {}, (err, server) => {
+  it('reports network errors', async () => {
+    server.use(
+      http.post(
+        'https://www.e-tar.lt/portal/DataExportAPI/:userguid/packetReceptionConfirmation',
+        () => HttpResponse.error(),
+      ),
+    );
 
-            expect(err).to.not.exist();
+    await expect(notify('package-id')).rejects.toThrow();
+  });
 
-            process.env.ETAR_HOST = server.select().info.uri;
+  it('reports missing env vars', async () => {
+    delete process.env.ETAR_USERNAME;
 
+    await expect(notify('package-id')).rejects.toThrow('Missing in process.env: ETAR_USERNAME');
+  });
 
-            const packageId = `package-id-${Date.now()}`;
-            EtarClient.notify(packageId, (err) => {
+  it('reports auth errors', async () => {
+    process.env.ETAR_USERNAME = 'invalid';
 
-                expect(err).to.not.exist();
-
-                expect(server.app.notifiedPackageId).to.equal(packageId);
-
-                done();
-            });
-        });
-    });
-
-    it('reports network errors', (done) => {
-
-        process.env.ETAR_HOST = 'http://0.0.0.0:666';
-
-        EtarClient.notify('package-id', (err) => {
-
-            expect(err).to.be.an.error('connect ECONNREFUSED 0.0.0.0:666');
-
-            done();
-        });
-    });
-
-    it('reports missing env vars', (done) => {
-
-        delete process.env.ETAR_USERNAME;
-
-        EtarClient.notify('package-id', (err) => {
-
-            expect(err).to.be.an.error('Missing in process.env: ETAR_USERNAME');
-
-            done();
-        });
-    });
-
-    it('reports auth errors', (done, onCleanup) => {
-
-        FakeServer.start(onCleanup, {}, (err, server) => {
-
-            expect(err).to.not.exist();
-
-            process.env.ETAR_HOST = server.select().info.uri;
-            process.env.ETAR_USERNAME = 'invalid';
-
-            EtarClient.notify('package-id', (err) => {
-
-                expect(err).to.be.an.error('TAR API notify response: 401 Unauthorized');
-
-                done();
-            });
-        });
-    });
+    await expect(notify('package-id')).rejects.toThrow('TAR API notify response: 401 Unauthorized');
+  });
 });

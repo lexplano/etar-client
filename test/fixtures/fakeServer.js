@@ -1,154 +1,99 @@
-'use strict';
+import { setupServer } from 'msw/node';
+import { http, HttpResponse } from 'msw';
+import Fs from 'node:fs';
+import Path from 'node:path';
 
-const Fs = require('fs');
-const Hapi = require('hapi');
-const HapiAuthBasic = require('hapi-auth-basic');
-const Path = require('path');
+const __dirname = import.meta.dirname;
 
+const ETAR_HOST = 'https://www.e-tar.lt';
 
-const internals = {
-    service: {}
-};
+function checkAuth(request) {
+  const auth = request.headers.get('authorization');
+  if (!auth || !auth.startsWith('Basic ')) {
+    return false;
+  }
 
+  const decoded = Buffer.from(auth.slice(6), 'base64').toString();
+  const colonIdx = decoded.indexOf(':');
+  const user = decoded.slice(0, colonIdx);
+  const pass = decoded.slice(colonIdx + 1);
+  return user === 'valid-user' && pass === 'valid-password';
+}
 
-internals.service.register = (server, options, next) => {
+function unauthorized() {
+  return new HttpResponse(null, {
+    status: 401,
+    statusText: 'Unauthorized',
+    headers: { 'WWW-Authenticate': 'Basic realm="Test"' },
+  });
+}
 
-    const plugins = [
-        HapiAuthBasic
-    ];
+export function createFakeServer() {
+  const state = {
+    notifiedPackageId: null,
+  };
 
-    server.register(plugins, (err) => {
+  const handlers = [
+    http.get(`${ETAR_HOST}/portal/DataExportAPI/:userguid/currentDataPacketInfo`, ({ request, params }) => {
+      if (!checkAuth(request)) {
+        return unauthorized();
+      }
 
-        if (err) {
-            return next(err);
-        }
+      const { userguid } = params;
 
-        server.auth.strategy('simple', 'basic', {
-            validateFunc: (req, u, p, cb) => {
+      if (userguid === '423') {
+        return new HttpResponse('New package not ready yet', { status: 423 });
+      }
 
-                cb(null, u === 'valid-user' && p === 'valid-password', { id: 'valid-user' });
-            }
-        });
+      if (userguid === '503') {
+        return new HttpResponse('Maintenance', { status: 503, statusText: 'Temporarily Unavailable' });
+      }
 
-        server.route({
-            method: 'GET',
-            path: '/portal/DataExportAPI/{userguid}/currentDataPacketInfo',
-            config: {
-                auth: 'simple',
-                handler: (request, reply) => {
+      const fixtureName = userguid === 'download-503' || userguid === 'notify-503' ? 'valid' : userguid;
+      const xmlContent = Fs.readFileSync(Path.join(__dirname, 'packageInfo', `${fixtureName}.xml`));
+      return new HttpResponse(xmlContent, { headers: { 'Content-Type': 'application/xml' } });
+    }),
 
-                    switch (request.params.userguid) {
+    http.get(`${ETAR_HOST}/portal/DataExportAPI/:userguid/currentDataPacket`, ({ request, params }) => {
+      if (!checkAuth(request)) {
+        return unauthorized();
+      }
 
-                        case '423':
-                            reply('New package not ready yet').code(423);
-                            break;
+      const { userguid } = params;
 
-                        case '503':
-                            reply('Maintenance').code(503).message('Temporarily Unavailable');
-                            break;
+      if (userguid === 'download-503') {
+        return new HttpResponse('Maintenance', { status: 503, statusText: 'Temporarily Unavailable' });
+      }
 
-                        case 'download-503':
-                        case 'notify-503':
-                            reply(Fs.createReadStream(Path.join(__dirname, 'packageInfo', 'valid.xml')));
-                            break;
+      const zipContent = Fs.readFileSync(Path.join(__dirname, 'packages', `${userguid}.zip`));
+      return new HttpResponse(zipContent, { headers: { 'Content-Type': 'application/zip' } });
+    }),
 
-                        default:
-                            reply(Fs.createReadStream(Path.join(__dirname, 'packageInfo', `${request.params.userguid}.xml`)));
-                    }
+    http.post(`${ETAR_HOST}/portal/DataExportAPI/:userguid/packetReceptionConfirmation`, async ({ request, params }) => {
+      if (!checkAuth(request)) {
+        return unauthorized();
+      }
 
-                }
-            }
-        });
+      const formData = await request.formData();
+      const id = formData.get('id');
 
-        server.route({
-            method: 'GET',
-            path: '/portal/DataExportAPI/{userguid}/currentDataPacket',
-            config: {
-                auth: 'simple',
-                handler: (request, reply) => {
+      if (!id) {
+        throw new Error('Invalid notify request');
+      }
 
-                    switch (request.params.userguid) {
+      state.notifiedPackageId = id;
 
-                        case 'download-503':
-                            reply('Maintenance').code(503).message('Temporarily Unavailable');
-                            break;
+      const { userguid } = params;
 
-                        default:
-                            reply(Fs.createReadStream(Path.join(__dirname, 'packages', `${request.params.userguid}.zip`)));
-                    }
+      if (userguid === '423' || userguid === 'notify-503') {
+        return new HttpResponse('Maintenance', { status: 503, statusText: 'Temporarily Unavailable' });
+      }
 
-                }
-            }
-        });
+      return HttpResponse.json({ success: true });
+    }),
+  ];
 
-        server.route({
-            method: 'POST',
-            path: '/portal/DataExportAPI/{userguid}/packetReceptionConfirmation',
-            config: {
-                auth: 'simple',
-                handler: (request, reply) => {
+  const server = setupServer(...handlers);
 
-                    if (!request.payload.id) {
-                        throw new Error('Invalid notify request');
-                    }
-
-                    server.app.notifiedPackageId = request.payload.id;
-
-                    switch (request.params.userguid) {
-
-                        case '423':
-                        case 'notify-503':
-                            reply('Maintenance').code(503).message('Temporarily Unavailable');
-                            break;
-
-                        default:
-                            reply({ success: true });
-                    }
-                }
-            }
-        });
-
-        next();
-    });
-};
-
-internals.service.register.attributes = {
-    name: 'fake-service'
-};
-
-
-module.exports.start = (onCleanup, options, callback) => {
-
-    const server = new Hapi.Server();
-
-    server.connection();
-
-    server.register(internals.service, (err) => {
-
-        if (err) {
-            return callback(err);
-        }
-
-        server.start((err) => {
-
-            if (err) {
-                return server.stop((stopErr) => {
-
-                    if (stopErr) {
-                        console.error(stopErr);
-                    }
-
-                    callback(err);
-                });
-            }
-
-            onCleanup((done) => {
-
-                return server.stop({ timeout: 60000 }, done);
-            });
-
-
-            setTimeout(() => callback(null, server));
-        });
-    });
-};
+  return { server, state };
+}

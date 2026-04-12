@@ -1,171 +1,110 @@
-'use strict';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { http, HttpResponse } from 'msw';
+import { createFakeServer } from './fixtures/fakeServer.js';
 
-const EtarClient = require('../index');
-const FakeServer = require('./fixtures/fakeServer');
-
-const Fs = require('fs');
-const Lab = require('lab');
-const Path = require('path');
-const Tmp = require('tmp');
-
-const { describe, it, expect, beforeEach, afterEach } = exports.lab = Lab.script();
+import Fs from 'node:fs';
+import Os from 'node:os';
+import Path from 'node:path';
+import { download } from '..';
 
 describe('download', () => {
+  let server;
+  let originalEnv;
+  let originalConsoleLog;
+  let tmpDir;
 
-    let originalEnv;
-    let originalConsoleLog;
-    let tmpDir;
+  beforeEach(() => {
+    ({ server } = createFakeServer());
+    server.listen({ onUnhandledRequest: 'bypass' });
+    originalEnv = Object.assign({}, process.env);
+    originalConsoleLog = console.log;
+    console.log = () => {};
 
-    beforeEach((done) => {
-
-        originalEnv = Object.assign({}, process.env);
-
-        Object.assign(process.env, {
-
-            ETAR_USERNAME: 'valid-user',
-            ETAR_PASSWORD: 'valid-password',
-            ETAR_USERGUID: 'valid'
-        });
-
-        originalConsoleLog = console.log;
-        console.log = () => {};
-
-        tmpDir = Tmp.dirSync({ unsafeCleanup: true });
-
-        done();
+    Object.assign(process.env, {
+      ETAR_USERNAME: 'valid-user',
+      ETAR_PASSWORD: 'valid-password',
+      ETAR_USERGUID: 'valid',
     });
 
-    afterEach((done) => {
+    tmpDir = Fs.mkdtempSync(Path.join(Os.tmpdir(), 'etar-'));
+  });
 
-        process.env = originalEnv;
-        console.log = originalConsoleLog;
-        tmpDir.removeCallback();
+  afterEach(() => {
+    process.env = originalEnv;
+    console.log = originalConsoleLog;
+    server.close();
+  });
 
-        done();
+  it('downloads the package', async () => {
+    process.env.ETAR_PROGRESS_INTERVAL = '1';
+
+    const logs = [];
+    console.log = (...args) => logs.push(args.join(' '));
+
+    const { packagePath, expectedPackageInfo } = await download(tmpDir);
+
+    expect(logs.some((msg) => msg.startsWith('Received ~'))).toBe(true);
+    expect(packagePath).toContain('20160305-20160305.zip');
+
+    const downloaded = Fs.readFileSync(packagePath);
+    const valid = Fs.readFileSync(Path.join(import.meta.dirname, 'fixtures', 'packages', 'valid.zip'));
+    expect(downloaded.equals(valid)).toBe(true);
+
+    expect(expectedPackageInfo).toEqual({
+      packageId: 'FB8ABC12-66E4-4CD2-9500-70AA0EAA071A',
+      packageFilename: '20160305-20160305.zip',
+      packageApproxSize: 1048576,
+      documentsFrom: '2016-03-05',
+      documentsTo: '2016-03-05',
     });
+  });
 
-    it('downloads the package', (done, onCleanup) => {
+  it('reports broken package checks', async () => {
+    process.env.ETAR_USERGUID = 'no-id';
 
-        FakeServer.start(onCleanup, {}, (err, server) => {
+    await expect(download(tmpDir)).rejects.toThrow('Package ID not found');
+  });
 
-            expect(err).to.not.exist();
+  it('reports no package yet', async () => {
+    process.env.ETAR_USERGUID = '423';
 
-            process.env.ETAR_HOST = server.select().info.uri;
+    await expect(download(tmpDir)).rejects.toThrow('No package available yet');
+  });
 
-            EtarClient.download(tmpDir.name, (err, { packagePath, expectedPackageInfo }) => {
+  it('reports double download', async () => {
+    const { packagePath } = await download(tmpDir);
 
-                expect(err).to.not.exist();
+    await expect(download(tmpDir)).rejects.toThrow(`Package exists: ${packagePath}`);
+  });
 
-                expect(packagePath).to.endWith('20160305-20160305.zip');
+  it('reports network errors', async () => {
+    server.use(
+      http.get('https://www.e-tar.lt/portal/DataExportAPI/valid/currentDataPacket', () => {
+        return HttpResponse.error();
+      }),
+    );
 
-                const downloaded = Fs.readFileSync(packagePath);
-                const valid = Fs.readFileSync(Path.join(__dirname, 'fixtures', 'packages', 'valid.zip'));
-                expect(downloaded.equals(valid)).to.equal(true);
+    await expect(download(tmpDir)).rejects.toThrow(TypeError);
+  });
 
-                expect(expectedPackageInfo).to.equal({
-                    packageId: 'FB8ABC12-66E4-4CD2-9500-70AA0EAA071A',
-                    packageFilename: '20160305-20160305.zip',
-                    packageApproxSize: 1048576,
-                    documentsFrom: '2016-03-05',
-                    documentsTo: '2016-03-05'
-                });
+  it('reports missing env vars', async () => {
+    delete process.env.ETAR_USERNAME;
 
-                done();
-            });
-        });
-    });
+    await expect(download(tmpDir)).rejects.toThrow('Missing in process.env: ETAR_USERNAME');
+  });
 
-    it('reports broken package checks', (done, onCleanup) => {
+  it('reports server errors', async () => {
+    process.env.ETAR_USERGUID = 'download-503';
 
-        FakeServer.start(onCleanup, {}, (err, server) => {
+    await expect(download(tmpDir)).rejects.toThrow('TAR API download response: 503 Temporarily Unavailable');
+  });
 
-            expect(err).to.not.exist();
-
-            process.env.ETAR_HOST = server.select().info.uri;
-            process.env.ETAR_USERGUID = 'no-id';
-
-            EtarClient.download(tmpDir.name, (err) => {
-
-                expect(err).to.be.an.error('Package ID not found');
-
-                done();
-            });
-        });
-    });
-
-    it('reports no package yet', (done, onCleanup) => {
-
-        FakeServer.start(onCleanup, {}, (err, server) => {
-
-            expect(err).to.not.exist();
-
-            process.env.ETAR_HOST = server.select().info.uri;
-            process.env.ETAR_USERGUID = '423';
-
-            EtarClient.download(tmpDir.name, (err) => {
-
-                expect(err).to.be.an.error('No package available yet');
-
-                done();
-            });
-        });
-    });
-
-    it('reports double download', (done, onCleanup) => {
-
-        FakeServer.start(onCleanup, {}, (err, server) => {
-
-            expect(err).to.not.exist();
-
-            process.env.ETAR_HOST = server.select().info.uri;
-
-            const directory = tmpDir.name;
-            EtarClient.download(directory, (err, { packagePath, expectedPackageInfo }) => {
-
-                expect(err).to.not.exist();
-
-                EtarClient.download(directory, (err) => {
-
-                    expect(err).to.exist(`Package exists: ${packagePath}`);
-
-                    done();
-                });
-            });
-        });
-    });
-
-    it('reports network errors');
-
-    it('reports missing env vars', (done) => {
-
-        delete process.env.ETAR_USERNAME;
-
-        EtarClient.download(tmpDir.name, (err) => {
-
-            expect(err).to.be.an.error('Missing in process.env: ETAR_USERNAME');
-
-            done();
-        });
-    });
-
-    it('reports server errors', (done, onCleanup) => {
-
-        FakeServer.start(onCleanup, {}, (err, server) => {
-
-            expect(err).to.not.exist();
-
-            process.env.ETAR_HOST = server.select().info.uri;
-            process.env.ETAR_USERGUID = 'download-503';
-
-            EtarClient.download(tmpDir.name, (err) => {
-
-                expect(err).to.be.an.error('TAR API download response: 503 Temporarily Unavailable');
-
-                done();
-            });
-        });
-    });
-
-    it('reports file writing errors');
-
+  it('reports file writing errors', async () => {
+    Fs.chmodSync(tmpDir, 0o444);
+    try {
+      await expect(download(tmpDir)).rejects.toThrow('EACCES');
+    } finally {
+      Fs.chmodSync(tmpDir, 0o755);
+    }
+  });
 });
