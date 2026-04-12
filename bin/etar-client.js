@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 
-import Yargs from 'yargs';
-import { check, download, verify, notify, rotate } from '..';
+import yargs from 'yargs';
+import { hideBin } from 'yargs/helpers';
+import { check, download, verify, notify, rotate } from '../lib/index.js';
 
 const ENV_VAR_MESSAGE = 'Required environment variables:\n  ETAR_USERNAME, ETAR_PASSWORD, ETAR_USERGUID.\n\n';
 
-const argv = Yargs.usage('Usage: $0 <command> [options]')
+const cli = yargs(hideBin(process.argv))
+  .usage('Usage: $0 <command> [options]')
   .command('check', "Check if there's a new package available for download", (yargs) => {
     yargs.usage('Usage: $0 check').help('help').epilog(ENV_VAR_MESSAGE);
   })
@@ -21,7 +23,9 @@ const argv = Yargs.usage('Usage: $0 <command> [options]')
   .command('rotate', 'check, then verify, then notify', (yargs) => {
     yargs.usage('Usage: $0 rotate <storage path>').demand(1).help('help').epilog(ENV_VAR_MESSAGE);
   })
-  .epilog(ENV_VAR_MESSAGE).argv;
+  .epilog(ENV_VAR_MESSAGE);
+
+const argv = cli.parse();
 
 const cmd = argv._[0];
 
@@ -66,5 +70,5 @@ switch (cmd) {
     if (cmd && cmd !== 'help') {
       console.error('Invalid command:', cmd);
     }
-    Yargs.showHelp();
+    cli.showHelp();
 }
