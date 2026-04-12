@@ -7,10 +7,10 @@ export default defineConfig({
       include: ['lib/**/*.js'],
       reporter: ['text'],
       thresholds: {
-        statements: 96,
+        statements: 99,
         branches: 98,
-        functions: 96,
-        lines: 96,
+        functions: 100,
+        lines: 99,
       },
     },
   },

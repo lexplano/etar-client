@@ -33,8 +33,6 @@
   "dependencies": {
     "asic-verify": "^0.3.0",
     "concat-stream": "^2.0.0",
-    "request": "2.x.x",
-    "request-progress": "3.x.x",
     "xml2js": "^0.6.2",
     "yargs": "^18.0.0",
     "yauzl": "^3.3.0"

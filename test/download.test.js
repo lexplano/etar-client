@@ -38,8 +38,14 @@ describe('download', () => {
   });
 
   it('downloads the package', async () => {
+    process.env.ETAR_PROGRESS_INTERVAL = '1';
+
+    const logs = [];
+    console.log = (...args) => logs.push(args.join(' '));
+
     const { packagePath, expectedPackageInfo } = await download(tmpDir);
 
+    expect(logs.some((msg) => msg.startsWith('Received ~'))).toBe(true);
     expect(packagePath).toContain('20160305-20160305.zip');
 
     const downloaded = Fs.readFileSync(packagePath);
