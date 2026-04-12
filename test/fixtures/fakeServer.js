@@ -7,10 +7,6 @@ const __dirname = import.meta.dirname;
 
 const ETAR_HOST = 'https://www.e-tar.lt';
 
-export const state = {
-  notifiedPackageId: null,
-};
-
 function checkAuth(request) {
   const auth = request.headers.get('authorization');
   if (!auth || !auth.startsWith('Basic ')) {
@@ -32,64 +28,72 @@ function unauthorized() {
   });
 }
 
-const handlers = [
-  http.get(`${ETAR_HOST}/portal/DataExportAPI/:userguid/currentDataPacketInfo`, ({ request, params }) => {
-    if (!checkAuth(request)) {
-      return unauthorized();
-    }
+export function createFakeServer() {
+  const state = {
+    notifiedPackageId: null,
+  };
 
-    const { userguid } = params;
+  const handlers = [
+    http.get(`${ETAR_HOST}/portal/DataExportAPI/:userguid/currentDataPacketInfo`, ({ request, params }) => {
+      if (!checkAuth(request)) {
+        return unauthorized();
+      }
 
-    if (userguid === '423') {
-      return new HttpResponse('New package not ready yet', { status: 423 });
-    }
+      const { userguid } = params;
 
-    if (userguid === '503') {
-      return new HttpResponse('Maintenance', { status: 503, statusText: 'Temporarily Unavailable' });
-    }
+      if (userguid === '423') {
+        return new HttpResponse('New package not ready yet', { status: 423 });
+      }
 
-    const fixtureName = userguid === 'download-503' || userguid === 'notify-503' ? 'valid' : userguid;
-    const xmlContent = Fs.readFileSync(Path.join(__dirname, 'packageInfo', `${fixtureName}.xml`));
-    return new HttpResponse(xmlContent, { headers: { 'Content-Type': 'application/xml' } });
-  }),
+      if (userguid === '503') {
+        return new HttpResponse('Maintenance', { status: 503, statusText: 'Temporarily Unavailable' });
+      }
 
-  http.get(`${ETAR_HOST}/portal/DataExportAPI/:userguid/currentDataPacket`, ({ request, params }) => {
-    if (!checkAuth(request)) {
-      return unauthorized();
-    }
+      const fixtureName = userguid === 'download-503' || userguid === 'notify-503' ? 'valid' : userguid;
+      const xmlContent = Fs.readFileSync(Path.join(__dirname, 'packageInfo', `${fixtureName}.xml`));
+      return new HttpResponse(xmlContent, { headers: { 'Content-Type': 'application/xml' } });
+    }),
 
-    const { userguid } = params;
+    http.get(`${ETAR_HOST}/portal/DataExportAPI/:userguid/currentDataPacket`, ({ request, params }) => {
+      if (!checkAuth(request)) {
+        return unauthorized();
+      }
 
-    if (userguid === 'download-503') {
-      return new HttpResponse('Maintenance', { status: 503, statusText: 'Temporarily Unavailable' });
-    }
+      const { userguid } = params;
 
-    const zipContent = Fs.readFileSync(Path.join(__dirname, 'packages', `${userguid}.zip`));
-    return new HttpResponse(zipContent, { headers: { 'Content-Type': 'application/zip' } });
-  }),
+      if (userguid === 'download-503') {
+        return new HttpResponse('Maintenance', { status: 503, statusText: 'Temporarily Unavailable' });
+      }
 
-  http.post(`${ETAR_HOST}/portal/DataExportAPI/:userguid/packetReceptionConfirmation`, async ({ request, params }) => {
-    if (!checkAuth(request)) {
-      return unauthorized();
-    }
+      const zipContent = Fs.readFileSync(Path.join(__dirname, 'packages', `${userguid}.zip`));
+      return new HttpResponse(zipContent, { headers: { 'Content-Type': 'application/zip' } });
+    }),
 
-    const formData = await request.formData();
-    const id = formData.get('id');
+    http.post(`${ETAR_HOST}/portal/DataExportAPI/:userguid/packetReceptionConfirmation`, async ({ request, params }) => {
+      if (!checkAuth(request)) {
+        return unauthorized();
+      }
 
-    if (!id) {
-      throw new Error('Invalid notify request');
-    }
+      const formData = await request.formData();
+      const id = formData.get('id');
 
-    state.notifiedPackageId = id;
+      if (!id) {
+        throw new Error('Invalid notify request');
+      }
 
-    const { userguid } = params;
+      state.notifiedPackageId = id;
 
-    if (userguid === '423' || userguid === 'notify-503') {
-      return new HttpResponse('Maintenance', { status: 503, statusText: 'Temporarily Unavailable' });
-    }
+      const { userguid } = params;
 
-    return HttpResponse.json({ success: true });
-  }),
-];
+      if (userguid === '423' || userguid === 'notify-503') {
+        return new HttpResponse('Maintenance', { status: 503, statusText: 'Temporarily Unavailable' });
+      }
 
-export const server = setupServer(...handlers);
+      return HttpResponse.json({ success: true });
+    }),
+  ];
+
+  const server = setupServer(...handlers);
+
+  return { server, state };
+}

@@ -1,14 +1,7 @@
-import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { http, HttpResponse } from 'msw';
-import { server, state } from './fixtures/fakeServer.js';
+import { createFakeServer } from './fixtures/fakeServer.js';
 import { check } from '..';
-
-beforeAll(() => server.listen({ onUnhandledRequest: 'bypass' }));
-afterEach(() => {
-  state.notifiedPackageId = null;
-  server.resetHandlers();
-});
-afterAll(() => server.close());
 
 function testErrorFixture(fixture, errorMessage) {
   return async () => {
@@ -18,10 +11,13 @@ function testErrorFixture(fixture, errorMessage) {
 }
 
 describe('check', () => {
+  let server;
   let originalEnv;
   let originalConsoleLog;
 
   beforeEach(() => {
+    ({ server } = createFakeServer());
+    server.listen({ onUnhandledRequest: 'bypass' });
     originalEnv = Object.assign({}, process.env);
     originalConsoleLog = console.log;
     console.log = () => {};
@@ -36,6 +32,7 @@ describe('check', () => {
   afterEach(() => {
     process.env = originalEnv;
     console.log = originalConsoleLog;
+    server.close();
   });
 
   it('returns package info JSON', async () => {

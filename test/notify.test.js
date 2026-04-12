@@ -1,19 +1,16 @@
-import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { http, HttpResponse } from 'msw';
-import { server, state } from './fixtures/fakeServer.js';
+import { createFakeServer } from './fixtures/fakeServer.js';
 import { notify } from '..';
 
-beforeAll(() => server.listen({ onUnhandledRequest: 'bypass' }));
-afterEach(() => {
-  state.notifiedPackageId = null;
-  server.resetHandlers();
-});
-afterAll(() => server.close());
-
 describe('notify', () => {
+  let server;
+  let state;
   let envCopy;
 
   beforeEach(() => {
+    ({ server, state } = createFakeServer());
+    server.listen({ onUnhandledRequest: 'bypass' });
     envCopy = Object.assign({}, process.env);
 
     Object.assign(process.env, {
@@ -25,6 +22,7 @@ describe('notify', () => {
 
   afterEach(() => {
     process.env = envCopy;
+    server.close();
   });
 
   it('notifies server', async () => {

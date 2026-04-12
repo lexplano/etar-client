@@ -1,24 +1,21 @@
-import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
-import { server, state } from './fixtures/fakeServer.js';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { http, HttpResponse } from 'msw';
+import { createFakeServer } from './fixtures/fakeServer.js';
 
 import Fs from 'node:fs';
 import Os from 'node:os';
 import Path from 'node:path';
 import { download } from '..';
 
-beforeAll(() => server.listen({ onUnhandledRequest: 'bypass' }));
-afterEach(() => {
-  state.notifiedPackageId = null;
-  server.resetHandlers();
-});
-afterAll(() => server.close());
-
 describe('download', () => {
+  let server;
   let originalEnv;
   let originalConsoleLog;
   let tmpDir;
 
   beforeEach(() => {
+    ({ server } = createFakeServer());
+    server.listen({ onUnhandledRequest: 'bypass' });
     originalEnv = Object.assign({}, process.env);
     originalConsoleLog = console.log;
     console.log = () => {};
@@ -35,6 +32,7 @@ describe('download', () => {
   afterEach(() => {
     process.env = originalEnv;
     console.log = originalConsoleLog;
+    server.close();
   });
 
   it('downloads the package', async () => {
@@ -79,7 +77,15 @@ describe('download', () => {
     await expect(download(tmpDir)).rejects.toThrow(`Package exists: ${packagePath}`);
   });
 
-  it('reports network errors');
+  it('reports network errors', async () => {
+    server.use(
+      http.get('https://www.e-tar.lt/portal/DataExportAPI/valid/currentDataPacket', () => {
+        return HttpResponse.error();
+      }),
+    );
+
+    await expect(download(tmpDir)).rejects.toThrow(TypeError);
+  });
 
   it('reports missing env vars', async () => {
     delete process.env.ETAR_USERNAME;
@@ -93,5 +99,12 @@ describe('download', () => {
     await expect(download(tmpDir)).rejects.toThrow('TAR API download response: 503 Temporarily Unavailable');
   });
 
-  it('reports file writing errors');
+  it('reports file writing errors', async () => {
+    Fs.chmodSync(tmpDir, 0o444);
+    try {
+      await expect(download(tmpDir)).rejects.toThrow('EACCES');
+    } finally {
+      Fs.chmodSync(tmpDir, 0o755);
+    }
+  });
 });

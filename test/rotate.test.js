@@ -1,24 +1,21 @@
-import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
-import { server, state } from './fixtures/fakeServer.js';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { createFakeServer } from './fixtures/fakeServer.js';
 
 import Fs from 'node:fs';
 import Os from 'node:os';
 import Path from 'node:path';
 import { rotate } from '..';
 
-beforeAll(() => server.listen({ onUnhandledRequest: 'bypass' }));
-afterEach(() => {
-  state.notifiedPackageId = null;
-  server.resetHandlers();
-});
-afterAll(() => server.close());
-
 describe('rotate', () => {
+  let server;
+  let state;
   let originalEnv;
   let originalConsoleLog;
   let tmpDir;
 
   beforeEach(() => {
+    ({ server, state } = createFakeServer());
+    server.listen({ onUnhandledRequest: 'bypass' });
     originalEnv = Object.assign({}, process.env);
     originalConsoleLog = console.log;
     console.log = () => {};
@@ -35,6 +32,7 @@ describe('rotate', () => {
   afterEach(() => {
     process.env = originalEnv;
     console.log = originalConsoleLog;
+    server.close();
   });
 
   it('notifies server', async () => {
@@ -101,6 +99,31 @@ describe('rotate', () => {
     await expect(rotate(tmpDir)).rejects.toThrow(
       /^ENOENT: no such file or directory, open '.*\/20160305-20160305\.zip'$/,
     );
+
+    expect(state.notifiedPackageId).toBeNull();
+  });
+
+  it('reports broken read stream in zip', async () => {
+    const validZip = Fs.readFileSync(Path.join(import.meta.dirname, 'fixtures', 'packages', 'valid.zip'));
+    const corrupted = Buffer.from(validZip);
+
+    const cdSig = Buffer.from([0x50, 0x4b, 0x01, 0x02]);
+    const targetFilename = Buffer.from('PaketoInfo.xml');
+    let searchOffset = 0;
+    while (searchOffset < corrupted.length) {
+      const idx = corrupted.indexOf(cdSig, searchOffset);
+      if (idx === -1) break;
+      const fnLen = corrupted.readUInt16LE(idx + 28);
+      if (corrupted.subarray(idx + 46, idx + 46 + fnLen).equals(targetFilename)) {
+        corrupted.writeUInt16LE(99, idx + 10);
+        break;
+      }
+      searchOffset = idx + 1;
+    }
+
+    Fs.writeFileSync(Path.join(tmpDir, '20160305-20160305.zip'), corrupted);
+
+    await expect(rotate(tmpDir)).rejects.toThrow('unsupported compression method');
 
     expect(state.notifiedPackageId).toBeNull();
   });
